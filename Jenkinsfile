@@ -92,9 +92,19 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', env.DOCKER_HUB_CREDENTIALS) {
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push('latest')
+                    withCredentials([usernamePassword(
+                        credentialsId: env.DOCKER_HUB_CREDENTIALS,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        if (isUnix()) {
+                            sh 'printf "%s" "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                        } else {
+                            bat '@echo off\r\npowershell -NoProfile -Command "$env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin"'
+                        }
+                        runCommand("docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                        runCommand("docker tag ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ${env.DOCKER_IMAGE}:latest")
+                        runCommand("docker push ${env.DOCKER_IMAGE}:latest")
                     }
                 }
             }
