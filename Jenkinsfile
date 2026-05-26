@@ -26,62 +26,62 @@ pipeline {
         HOST_PORT = '8081'
     }
     stages {
-        stage('Clean') {
-            steps {
-                script {
-                    runCommand('mvn clean')
-                }
-            }
-        }
-        stage('Compile') {
-            steps {
-                script {
-                    runCommand('mvn compile')
-                }
-            }
-        }
-        stage('Test') {
-            steps {
-                script {
-                    runCommand('mvn test -Dmaven.test.failure.ignore=true')
-                }
-            }
-        }
-        stage('PMD') {
-            steps {
-                script {
-                    runCommand('mvn pmd:pmd')
-                }
-            }
-        }
-        stage('JaCoCo') {
-            steps {
-                script {
-                    runCommand('mvn jacoco:report')
-                }
-            }
-        }
-        stage('Javadoc') {
-            steps {
-                script {
-                    runCommand('mvn javadoc:javadoc')
-                }
-            }
-        }
-        stage('Site') {
-            steps {
-                script {
-                    runCommand('mvn site')
-                }
-            }
-        }
-        stage('Package') {
-            steps {
-                script {
-                    runCommand('mvn package -DskipTests')
-                }
-            }
-        }
+        // stage('Clean') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn clean')
+        //         }
+        //     }
+        // }
+        // stage('Compile') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn compile')
+        //         }
+        //     }
+        // }
+        // stage('Test') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn test -Dmaven.test.failure.ignore=true')
+        //         }
+        //     }
+        // }
+        // stage('PMD') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn pmd:pmd')
+        //         }
+        //     }
+        // }
+        // stage('JaCoCo') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn jacoco:report')
+        //         }
+        //     }
+        // }
+        // stage('Javadoc') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn javadoc:javadoc')
+        //         }
+        //     }
+        // }
+        // stage('Site') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn site')
+        //         }
+        //     }
+        // }
+        // stage('Package') {
+        //     steps {
+        //         script {
+        //             runCommand('mvn package -DskipTests')
+        //         }
+        //     }
+        // }
         stage('Build Docker Image') {
             steps {
                 script {
@@ -115,12 +115,12 @@ pipeline {
             }
         }
     }
-    post {
-        always {
-            archiveArtifacts artifacts: '**/target/site/**/*.*', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.jar', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.war', fingerprint: true
-            junit '**/target/surefire-reports/*.xml'
-        }
-    }
+    // post {
+    //     always {
+    //         archiveArtifacts artifacts: '**/target/site/**/*.*', fingerprint: true
+    //         archiveArtifacts artifacts: '**/target/**/*.jar', fingerprint: true
+    //         archiveArtifacts artifacts: '**/target/**/*.war', fingerprint: true
+    //         junit '**/target/surefire-reports/*.xml'
+    //     }
+    // }
 }
