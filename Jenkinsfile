@@ -18,12 +18,12 @@ pipeline {
     agent any
     environment {
         // TODO: Replace with the Jenkins credentials ID for your Docker Hub account.
-        DOCKER_HUB_CREDENTIALS = '0d7b5b67-aeef-4e51-b1a4-f1b32fb38ae2'
+        DOCKER_HUB_CREDENTIALS = 'docker-hub-credentials'
         // TODO: Replace with your Docker Hub repository, for example: 'your-dockerhub-username/teedy-app'.
         DOCKER_IMAGE = 'ronneywang/teedy2025_manual'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
-        CONTAINER_NAME = 'teedy-container-8081'
-        HOST_PORT = '8081'
+        K8S_DEPLOYMENT = 'teedy'
+        K8S_CONTAINER = 'teedy'
     }
     stages {
         // stage('Clean') {
@@ -75,17 +75,18 @@ pipeline {
         //         }
         //     }
         // }
-        // stage('Package') {
-        //     steps {
-        //         script {
-        //             runCommand('mvn package -DskipTests')
-        //         }
-        //     }
-        // }
+        stage('Package') {
+            steps {
+                script {
+                    runCommand('mvn package -DskipTests')
+                }
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}", '.')
+                    runCommand("docker build -t ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} .")
+                    runCommand("docker tag ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ${env.DOCKER_IMAGE}:latest")
                 }
             }
         }
@@ -102,25 +103,30 @@ pipeline {
                         } else {
                             bat '@echo off\r\npowershell -NoProfile -Command "$env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin"'
                         }
-                        runCommand("docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
-                        runCommand("docker tag ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ${env.DOCKER_IMAGE}:latest")
                         runCommand("docker push ${env.DOCKER_IMAGE}:latest")
+                        runCommand("docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
                     }
                 }
             }
         }
-        stage('Run Docker Container') {
+        stage('Load Image Into Minikube') {
+            steps {
+                script {
+                    runCommand("minikube image load ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
                     runCommandAllowFailure(
-                        "docker stop ${env.CONTAINER_NAME} || true",
-                        "docker stop %CONTAINER_NAME% || exit /b 0"
+                        "kubectl patch deployment ${env.K8S_DEPLOYMENT} --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/imagePullPolicy\",\"value\":\"IfNotPresent\"}]'",
+                        "kubectl patch deployment %K8S_DEPLOYMENT% --type=json -p=\"[{\\\"op\\\":\\\"replace\\\",\\\"path\\\":\\\"/spec/template/spec/containers/0/imagePullPolicy\\\",\\\"value\\\":\\\"IfNotPresent\\\"}]\""
                     )
-                    runCommandAllowFailure(
-                        "docker rm ${env.CONTAINER_NAME} || true",
-                        "docker rm %CONTAINER_NAME% || exit /b 0"
-                    )
-                    runCommand("docker run -d -p ${env.HOST_PORT}:8080 --name ${env.CONTAINER_NAME} ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                    runCommand("kubectl set image deployment/${env.K8S_DEPLOYMENT} ${env.K8S_CONTAINER}=${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                    runCommand("kubectl rollout status deployment/${env.K8S_DEPLOYMENT}")
+                    runCommand("kubectl get pods")
+                    runCommand("kubectl get services")
                 }
             }
         }
